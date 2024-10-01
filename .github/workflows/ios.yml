@@ -1,0 +1,48 @@
+name: iOS Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS Project
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v2
+
+    - name: Install CocoaPods dependencies
+      run: |
+        pod install --project-directory=Enchanted
+
+    - name: Build the project
+      run: |
+        xcodebuild -workspace Enchanted.xcodeproj/project.xcworkspace \
+                   -scheme Enchanted \
+                   -sdk iphoneos \
+                   -configuration Release \
+                   -archivePath ${{ github.workspace }}/build/Enchanted.xcarchive \
+                   archive
+
+    - name: Export .ipa
+      run: |
+        xcodebuild -exportArchive \
+                   -archivePath ${{ github.workspace }}/build/Enchanted.xcarchive \
+                   -exportOptionsPlist Enchanted/Info.plist \
+                   -exportPath ${{ github.workspace }}/build/Enchanted
+
+    - name: Upload .ipa as an artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Enchanted.ipa
+        path: build/Enchanted/*.ipa
